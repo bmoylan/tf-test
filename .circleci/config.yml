@@ -1,0 +1,39 @@
+---
+version: 2
+jobs:
+  build:
+    docker:
+    - image: hashicorp/terraform:0.9.6
+    working_directory: /workspace
+    steps:
+    - checkout
+    - run: terraform get
+    - run: terraform init
+    - run: terraform plan -out=terraform.tfplan
+    - persist_to_workspace:
+        root: /
+        paths: [ workspace ]
+  apply:
+    docker:
+    - image: hashicorp/terraform:0.9.6
+    working_directory: /workspace
+    steps:
+    - attach_workspace:
+        at: /
+    - run: terraform apply terraform.tfplan
+    - persist_to_workspace:
+        root: /
+        paths: [ workspace ]
+
+workflows:
+  version: 2
+  terraform:
+    jobs:
+    - build
+    - hold:
+        type: approval
+        requires:
+        - build
+    - apply:
+        requires:
+        - hold
